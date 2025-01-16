@@ -1,3 +1,4 @@
+{% set prod_schema = 'dbt' %}
 with 
 superset_sources as (
     SELECT
@@ -36,14 +37,17 @@ superset_sources as (
 select *
 from superset_sources ss
 where 
-    '{{ env_var('DBT_SCHEMA', target.schema) }}'
-        || 
-        substr(
-            cast(ss.schema_name as varchar),
-            strpos(cast(ss.schema_name as varchar), 'dbt_') + length('dbt_'),
-            length(cast(ss.schema_name as varchar))
-            )
-     || '.' || cast(ss.table_name as varchar) not in (
+    case when cast(ss.schema_name as varchar) like '{{ prod_schema }}_%' then
+        '{{ env_var('DBT_SCHEMA', target.schema) }}'
+            || 
+            substr(
+                cast(ss.schema_name as varchar),
+                strpos(cast(ss.schema_name as varchar), '{{ prod_schema }}') + length('{{ prod_schema }}'),
+                length(cast(ss.schema_name as varchar))
+                )
+        when cast(ss.schema_name as varchar) = '{{ prod_schema }}' then '{{ env_var('DBT_SCHEMA', target.schema) }}'
+        else cast(ss.schema_name as varchar)
+    end || '.' || cast(ss.table_name as varchar) not in (
 	select
 		distinct schema_name || '.' || alias
 	from
