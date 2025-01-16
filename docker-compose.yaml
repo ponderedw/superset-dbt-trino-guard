@@ -1,0 +1,100 @@
+version: "3"
+
+services:
+  superset:
+    networks:
+      data-lake-network:
+    build:
+      context: superset
+      dockerfile: Dockerfile
+    container_name: superset
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_NAME: superset
+      DATABASE_USER: superset
+      ADMIN_PASSWORD: superset
+      DATABASE_PASSWORD: superset
+    ports:
+      - "8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      data-lake-network:
+    environment:
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset
+      PGDATA: /var/lib/postgresql/data/db-files/
+      POSTGRES_MULTIPLE_DATABASES: superset,postgres
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data/db-files
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "superset"]
+      interval: 5s
+      retries: 5
+
+  trino:
+    image: trinodb/trino
+    container_name: trino
+    networks:
+      data-lake-network:
+    ports:
+      - 8080:8080
+    volumes:
+      - "./trino/trino_connections/postgres.properties:/etc/trino/catalog/postgres.properties"
+      - "./trino/trino_connections/superset.properties:/etc/trino/catalog/superset.properties"
+      - "./trino/coordinator-config.properties:/etc/trino/config.properties"
+
+  trino-worker:
+    image: trinodb/trino
+    networks:
+      data-lake-network:
+    volumes:
+      - "./trino/trino_connections/postgres.properties:/etc/trino/catalog/postgres.properties"
+      - "./trino/trino_connections/superset.properties:/etc/trino/catalog/superset.properties"
+      - "./trino/worker-1/worker-config.properties:/etc/trino/config.properties"
+
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:latest
+    container_name: cloudbeaver
+    ports:
+      - "8089:8978"
+    networks:
+      data-lake-network:
+    environment:
+      - CB_SERVER_NAME=CloudBeaver CE Server
+      - CB_SERVER_URL=http://localhost:8089
+      - CB_ADMIN_NAME=TestTest123
+      - CB_ADMIN_PASSWORD=TestTest123
+    restart: unless-stopped
+    volumes:
+      - "./dbeaver_conf/initial-data-sources.conf:/opt/cloudbeaver/conf/initial-data-sources.conf"
+      - "./dbeaver_conf/queries:/opt/cloudbeaver/workspace/GlobalConfiguration/"
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: jupyter/Dockerfile
+    networks:
+      data-lake-network:
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./jupyter/notebooks:/home/jovyan/work/notebooks
+      - ./dbt:/home/jovyan/work/dbt
+    environment:
+      - JUPYTER_TOKEN=TestTest123
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+    command: start-notebook.sh --NotebookApp.token=${JUPYTER_TOKEN}
+
+networks:
+  data-lake-network: 

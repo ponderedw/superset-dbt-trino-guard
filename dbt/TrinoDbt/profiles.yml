@@ -1,0 +1,22 @@
+TrinoIngestionDbt:
+  outputs:
+    dev:
+      database: "{{ env_var('TRINO_DBNAME', 'postgres') }}"
+      host: "{{ env_var('TRINO_HOST', 'localhost') }}"
+      method: none
+      port: 8080
+      schema: "{{ env_var('TRINO_SCHEMA', 'dbt') }}"
+      threads: 1
+      type: trino
+      user: "{{ env_var('TRINO_USER', 'admin') }}"
+
+    container:
+      database: "{{ env_var('TRINO_DBNAME', 'postgres') }}"
+      host: "{{ env_var('TRINO_HOST', 'trino') }}"
+      method: none
+      port: 8080
+      schema: "{{ env_var('TRINO_SCHEMA', 'dbt') }}"
+      threads: 1
+      type: trino
+      user: "{{ env_var('TRINO_USER', 'admin') }}"
+  target: dev

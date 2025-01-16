@@ -1,0 +1,8 @@
+version: 2
+sources:
+  - name: db_metadata
+    database: postgres
+    schema: "{{ env_var('DBT_SCHEMA', target.schema) }}"
+    tables:
+      - name: metadata
+

@@ -1,0 +1,22 @@
+PostgresDbt:
+  outputs:
+    dev:
+      database: "{{ env_var('DBT_DBNAME', 'postgres') }}"
+      host: "{{ env_var('DBT_HOST', 'localhost') }}"
+      port: 5432
+      schema: "{{ env_var('DBT_SCHEMA', 'dbt') }}"
+      threads: 1
+      type: postgres
+      user: "{{ env_var('DBT_USER', 'superset') }}"
+      password: "{{ env_var('DBT_PASSWORD', 'superset') }}"
+
+    container:
+      database: "{{ env_var('DBT_DBNAME', 'postgres') }}"
+      host: "{{ env_var('DBT_HOST', 'postgres') }}"
+      port: 5432
+      schema: "{{ env_var('DBT_SCHEMA', 'dbt') }}"
+      threads: 1
+      type: postgres
+      user: "{{ env_var('DBT_USER', 'superset') }}"
+      password: "{{ env_var('DBT_PASSWORD', 'superset') }}"
+  target: dev
