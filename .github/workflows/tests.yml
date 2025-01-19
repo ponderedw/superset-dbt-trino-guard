@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'dbt/**'
+
+jobs:
+  superset-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-core==1.8.8 dbt-trino==1.8.3 awscli
+
+      - name: Test Changed Models
+        env:
+          TRINO_HOST: ${{ secrets.TRINO_HOST }}
+          TRINO_USER: ${{ secrets.TRINO_USER }}
+          TRINO_PASSWORD: ${{ secrets.TRINO_PASSWORD }}
+          TRINO_DBNAME: ${{ secrets.TRINO_DBNAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MANIFEST_S3_PATH: ${{ secrets.MANIFEST_S3_PATH }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          export TRINO_SCHEMA="dbt_pr_$RUN_ID"
+          export DBT_SCHEMA="dbt_pr_$RUN_ID"
+          dbt build --select metadata --project-dir dbt/PostgresDbt --profiles-dir dbt/PostgresDbt
+          dbt test --select superset_test --project-dir dbt/TrinoDbt --profiles-dir dbt/TrinoDbt
+
+  
